@@ -1359,23 +1359,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
       {/* USER MODAL (ADD / EDIT) */}
       {/* ------------------------------------------------------------- */}
       {userModalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-sm animate-in fade-in duration-200">
           <div 
-            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
             dir={isRtl ? 'rtl' : 'ltr'}
           >
-            <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
+            {/* Modal Header (Fixed / Non-scrollable) */}
+            <div className="bg-slate-900 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30 shrink-0">
                   <UserPlus className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="text-base font-black">
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-black truncate">
                     {userModalMode === 'add'
                       ? (isRtl ? 'إضافة مستخدم جديد للنظام' : 'Add New User')
                       : (isRtl ? 'تعديل بيانات المستخدم' : 'Edit User Account')}
                   </h3>
-                  <div className="text-[11px] text-slate-400 font-bold">
+                  <div className="text-[11px] text-slate-400 font-bold truncate">
                     {userModalMode === 'add' ? (isRtl ? 'تعيين الصلاحيات وكلمة المرور' : 'Set credentials & role') : selectedUser?.username}
                   </div>
                 </div>
@@ -1383,26 +1384,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
               <button
                 type="button"
                 onClick={() => setUserModalMode(null)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer shrink-0"
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveUser} className="p-6 space-y-4">
-              {userFormError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{userFormError}</span>
-                </div>
-              )}
+            {/* Modal Form with Scrollable Content Body and Fixed Footer */}
+            <form onSubmit={handleSaveUser} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+                {userFormError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{userFormError}</span>
+                  </div>
+                )}
 
-              {userFormSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                  <span>{userFormSuccess}</span>
-                </div>
-              )}
+                {userFormSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{userFormSuccess}</span>
+                  </div>
+                )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1702,28 +1706,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
                   </label>
                 </div>
               )}
+            </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setUserModalMode(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  {isRtl ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-md cursor-pointer"
-                >
-                  {userModalMode === 'add'
-                    ? (isRtl ? 'إضافة المستخدم' : 'Create User')
-                    : (isRtl ? 'حفظ التعديلات' : 'Save Changes')}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Fixed Modal Action Buttons Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/90 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setUserModalMode(null)}
+                className="h-10 px-5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              >
+                {isRtl ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                className="h-10 px-6 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-md shadow-sky-600/20 transition-all cursor-pointer flex items-center gap-2"
+              >
+                {userModalMode === 'add'
+                  ? (isRtl ? 'إضافة المستخدم' : 'Create User')
+                  : (isRtl ? 'حفظ التعديلات' : 'Save Changes')}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 };

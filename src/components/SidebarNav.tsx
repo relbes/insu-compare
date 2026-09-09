@@ -92,31 +92,31 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
   // Determine active category to keep it open
   const getInitialOpenCategories = () => {
+    const isSpecs = ['step1_excel', 'step2_rfp', 'step3_binding', 'step4_review'].includes(normalizedCurrentTab);
+    const isAnalysis = ['step5_proposals', 'step_actuarial', 'step6_tradeoff_matrix', 'audit'].includes(normalizedCurrentTab);
+    const isDecision = ['step_reports'].includes(normalizedCurrentTab);
+    const isAdminTab = ['admin'].includes(normalizedCurrentTab);
+
     return {
-      specs: ['step1_excel', 'step2_rfp', 'step3_binding', 'step4_review'].includes(normalizedCurrentTab),
-      analysis: ['step5_proposals', 'step_actuarial', 'step6_tradeoff_matrix', 'audit'].includes(normalizedCurrentTab),
-      decision: ['step_reports'].includes(normalizedCurrentTab),
-      admin: ['admin'].includes(normalizedCurrentTab)
+      specs: isSpecs || (!isAnalysis && !isDecision && !isAdminTab),
+      analysis: isAnalysis,
+      decision: isDecision,
+      admin: isAdminTab
     };
   };
 
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    specs: true,
-    analysis: true,
-    decision: true,
-    admin: false
-  });
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(getInitialOpenCategories);
 
-  // Automatically expand category when activeTab changes
+  // Automatically adjust opened category when activeTab changes
   useEffect(() => {
     if (['step1_excel', 'step2_rfp', 'step3_binding', 'step4_review'].includes(normalizedCurrentTab)) {
-      setOpenCategories(prev => ({ ...prev, specs: true }));
+      setOpenCategories({ specs: true, analysis: false, decision: false, admin: false });
     } else if (['step5_proposals', 'step_actuarial', 'step6_tradeoff_matrix', 'audit'].includes(normalizedCurrentTab)) {
-      setOpenCategories(prev => ({ ...prev, analysis: true }));
+      setOpenCategories({ specs: false, analysis: true, decision: false, admin: false });
     } else if (normalizedCurrentTab === 'step_reports') {
-      setOpenCategories(prev => ({ ...prev, decision: true }));
+      setOpenCategories({ specs: false, analysis: false, decision: true, admin: false });
     } else if (normalizedCurrentTab === 'admin') {
-      setOpenCategories(prev => ({ ...prev, admin: true }));
+      setOpenCategories({ specs: false, analysis: false, decision: false, admin: true });
     }
   }, [normalizedCurrentTab]);
 
@@ -313,10 +313,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   ];
 
   const sidebarContent = (
-    <div className="h-full flex flex-col justify-between overflow-hidden select-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm">
+    <div className="h-full flex flex-col justify-between select-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm">
       
       {/* 1. Header: Platform identity & Active Tender Banner */}
-      <div className="px-3 py-3 border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 shrink-0">
+      <div className="px-3.5 py-3 border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             {settings.logoUrl ? (
@@ -324,21 +324,21 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                 src={settings.logoUrl} 
                 alt="Logo" 
                 onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
-                className="w-9 h-9 rounded-xl object-contain bg-white shadow-xs shrink-0 ring-1 ring-slate-200 dark:ring-slate-700 p-1" 
+                className="w-9 h-9 rounded-xl object-contain bg-white shadow-xs shrink-0 ring-1 ring-slate-200 dark:ring-slate-700 p-0.5" 
               />
             ) : (
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-sky-700 flex items-center justify-center text-white shadow-xs shrink-0">
-                <Scale className="w-5 h-5 text-white" />
+                <Scale className="w-4.5 h-4.5 text-white" />
               </div>
             )}
             
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <h1 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate">
+                <h1 className="text-sm font-black text-slate-900 dark:text-white leading-snug truncate">
                   {isRtl ? 'منصة مقارنة عروض التأمين' : 'Insurance Tender Evaluator'}
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] font-bold text-sky-700 dark:text-sky-400 flex items-center gap-1 truncate">
+                  <span className="text-xs font-bold text-sky-700 dark:text-sky-400 flex items-center gap-1 truncate">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="truncate">{activeProjectName || (isRtl ? 'مناقصة التأمين الطبي' : 'Active Tender')}</span>
                   </span>
@@ -375,15 +375,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           <button
             type="button"
             onClick={onCloseMobile}
-            className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
+            className="lg:hidden w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* 2. Main Navigation: Categorized Main Menus with Collapsible Submenus */}
-      <div className="flex-1 py-3 px-2 space-y-2.5 overflow-y-auto custom-scrollbar">
+      {/* 2. Main Navigation: Categorized Main Menus (Scrollable with hidden scrollbar so all items can be reached without showing a scrollbar) */}
+      <div className="flex-1 py-2 px-2.5 space-y-2 overflow-y-auto scrollbar-none min-h-0">
         {menuCategories
           .filter(category => category.key !== 'admin' || isAdmin)
           .map((category) => {
@@ -395,7 +395,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             // In Collapsed mode: icon only with popover title
             return (
               <div key={category.key} className="space-y-1">
-                <div className="w-full flex justify-center py-1">
+                <div className="w-full flex justify-center py-0.5">
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500`}>
                     <CategoryIcon className="w-4 h-4" />
                   </div>
@@ -429,7 +429,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           return (
             <div 
               key={category.key} 
-              className={`rounded-2xl transition-all duration-200 border ${
+              className={`rounded-xl transition-all duration-200 border ${
                 hasActiveChild 
                   ? 'bg-white dark:bg-slate-900 border-indigo-200/90 dark:border-indigo-900/60 shadow-xs' 
                   : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/70 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
@@ -437,7 +437,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             >
               {/* Main Menu Header Toggle */}
               <div
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-start transition-colors cursor-pointer group ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-start transition-colors cursor-pointer group ${
                   hasActiveChild
                     ? 'text-slate-900 dark:text-white'
                     : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
@@ -454,7 +454,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                     }
                   }}
                 >
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
                     hasActiveChild 
                       ? 'bg-indigo-600 text-white shadow-xs' 
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
@@ -462,16 +462,13 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                     <CategoryIcon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-black tracking-tight truncate leading-tight">
+                    <div className="text-sm font-black tracking-tight truncate leading-tight">
                       {isRtl ? category.shortTitleAr : category.shortTitleEn}
-                    </div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate leading-none mt-0.5">
-                      {isRtl ? `${category.submenus.length} بنود فرعية` : `${category.submenus.length} sub-items`}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0 ms-2">
+                <div className="flex items-center gap-1.5 shrink-0 ms-1.5">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-black border ${category.badgeColor}`}>
                     {category.badge}
                   </span>
@@ -481,7 +478,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                       e.stopPropagation();
                       toggleCategory(category.key);
                     }}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-transform duration-200 p-1 cursor-pointer"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-transform duration-200 p-0.5 cursor-pointer"
                     title={isOpen ? (isRtl ? 'طي القائمة' : 'Collapse') : (isRtl ? 'توسيع القائمة' : 'Expand')}
                   >
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-0' : isRtl ? 'rotate-90' : '-rotate-90'}`} />
@@ -502,7 +499,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                         key={step.id}
                         type="button"
                         onClick={() => handleItemClick(step.id)}
-                        className={`w-full text-start py-2 px-2.5 rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer group/item relative ${
+                        className={`w-full text-start py-1.5 px-2.5 rounded-lg transition-all flex items-center justify-between gap-2 cursor-pointer group/item relative ${
                           isActive
                             ? 'bg-gradient-to-r from-indigo-50 to-sky-50 dark:from-indigo-950/80 dark:to-sky-950/80 text-indigo-950 dark:text-sky-200 font-black border border-indigo-200 dark:border-indigo-800 shadow-2xs'
                             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white font-medium border border-transparent'
@@ -522,19 +519,16 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className={`text-xs truncate leading-snug ${isActive ? 'font-black text-indigo-950 dark:text-white' : 'font-bold text-slate-800 dark:text-slate-200'}`}>
+                            <div className={`text-xs sm:text-[13px] truncate leading-normal ${isActive ? 'font-black text-indigo-950 dark:text-white' : 'font-bold text-slate-800 dark:text-slate-200'}`}>
                               {isRtl ? step.titleAr : step.titleEn}
-                            </div>
-                            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate leading-none mt-0.5">
-                              {isRtl ? step.descAr : step.descEn}
                             </div>
                           </div>
                         </div>
 
                         {/* Status / Pill Badge */}
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {step.pill && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded font-black bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-black bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                               {step.pill}
                             </span>
                           )}
@@ -559,11 +553,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* 3. Bottom Footer Actions: Sleek, compact toolbar */}
       <div className="p-2.5 border-t border-slate-200/90 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 space-y-2 shrink-0">
         
-        {/* AI Advisor Button - Prominent, beautiful gradient */}
+        {/* AI Advisor Button */}
         <button
           type="button"
           onClick={onOpenAdvisor}
-          className={`w-full rounded-xl flex items-center justify-between px-3 h-10 font-black transition-all cursor-pointer shadow-xs active:scale-[0.99] text-xs ${
+          className={`w-full rounded-xl flex items-center justify-between px-3 h-9 font-black transition-all cursor-pointer shadow-xs active:scale-[0.99] text-xs sm:text-[13px] ${
             isCollapsed 
               ? 'justify-center px-0 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-slate-800' 
               : 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/20'
@@ -571,11 +565,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           title={isRtl ? 'المستشار الذكي (AI Smart Advisor)' : 'AI Smart Advisor'}
         >
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+            <div className="w-5.5 h-5.5 rounded bg-white/20 flex items-center justify-center shrink-0">
               <Bot className="w-3.5 h-3.5 text-white" />
             </div>
             {!isCollapsed && (
-              <span>{isRtl ? 'المستشار الذكي (AI)' : 'AI Advisor'}</span>
+              <span className="text-xs sm:text-[13px] font-black">{isRtl ? 'المستشار الذكي (AI)' : 'AI Advisor'}</span>
             )}
           </div>
           {!isCollapsed && (
@@ -594,7 +588,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               type="button"
               onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
               className={`w-full h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shadow-2xs ${
-                isCollapsed ? 'px-1' : 'px-2'
+                isCollapsed ? 'px-0.5' : 'px-2'
               }`}
               title={isRtl ? 'نماذج كراسة الشروط RFP' : 'RFP Templates'}
             >
