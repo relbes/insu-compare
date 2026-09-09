@@ -79,7 +79,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   committeeTitleEn: 'Arab Open University - Jordan',
   logoUrl: '/logo.png',
   logoWidth: 160,
-  aiProvider: process.env.OPENAI_API_KEY ? 'openai' : 'gemini',
+  aiProvider: 'gemini',
   geminiModel: 'gemini-3.8-flash',
   openaiModel: 'gpt-4o',
   defaultCurrency: 'JOD',

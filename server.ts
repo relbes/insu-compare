@@ -75,11 +75,26 @@ function isHighDemandOrTransient(err: any): boolean {
   );
 }
 
-// Resilient GenAI call with supported models & progressive retries for 503 / 429
-const FALLBACK_MODELS = [
+function extractGenAiText(response: any): string {
+  if (!response) return '';
+  if (typeof response.text === 'string') return response.text;
+  if (typeof response.text === 'function') {
+    try {
+      const t = response.text();
+      if (typeof t === 'string') return t;
+    } catch (_) {}
+  }
+  const parts = response.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts)) {
+    return parts.map((p: any) => p?.text || '').filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+// Resilient GenAI call with supported modern models & progressive retries for 503 / 429
+const GEMINI_MODELS = [
   'gemini-3.8-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest'
+  'gemini-3.1-flash-lite'
 ];
 
 async function callGeminiInternal(
@@ -87,44 +102,48 @@ async function callGeminiInternal(
     contents: any;
     config?: any;
   }
-) {
+): Promise<{ text: string }> {
   const ai = getGenAI();
   let lastError: any = null;
 
-  for (let mIdx = 0; mIdx < FALLBACK_MODELS.length; mIdx++) {
-    const model = FALLBACK_MODELS[mIdx];
+  for (let mIdx = 0; mIdx < GEMINI_MODELS.length; mIdx++) {
+    const model = GEMINI_MODELS[mIdx];
     try {
       const response = await ai.models.generateContent({
         model,
         contents: requestConfig.contents,
         config: requestConfig.config
       });
-      if (response && response.text) {
-        return response;
+      const text = extractGenAiText(response);
+      if (text) {
+        return { text };
       }
     } catch (err: any) {
       lastError = err;
       const isHighDemand = isHighDemandOrTransient(err);
-      console.warn(
-        `[Gemini API] Model ${model} ${isHighDemand ? 'experiencing temporary high demand (503/UNAVAILABLE)' : 'failed'}: ${err?.message || err}. Failing over to next available model...`
-      );
+      const cleanMsg = (err?.message || String(err)).replace(/\s+/g, ' ').trim().slice(0, 120);
 
-      // If we have other fallback models, immediately try the next model with a short pause
-      if (mIdx < FALLBACK_MODELS.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
+      // If another model is available, switch immediately with slight jitter
+      if (mIdx < GEMINI_MODELS.length - 1) {
+        console.info(
+          `[Gemini API] Model ${model} returned (${isHighDemand ? 'temporary demand spike' : cleanMsg}). Seamlessly trying ${GEMINI_MODELS[mIdx + 1]}...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 250 + Math.random() * 200));
         continue;
       }
 
-      // If all models failed and it was high demand, try one final backoff attempt on gemini-3.1-flash-lite
+      // If all models hit a demand spike, perform one final retry with exponential backoff on gemini-3.1-flash-lite
       if (isHighDemand) {
         try {
-          await new Promise((resolve) => setTimeout(resolve, 1200));
+          console.info('[Gemini API] Applying exponential backoff for high-demand recovery...');
+          await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 400));
           const retryRes = await ai.models.generateContent({
             model: 'gemini-3.1-flash-lite',
             contents: requestConfig.contents,
             config: requestConfig.config
           });
-          if (retryRes && retryRes.text) return retryRes;
+          const text = extractGenAiText(retryRes);
+          if (text) return { text };
         } catch (retryErr: any) {
           lastError = retryErr;
         }
@@ -132,8 +151,11 @@ async function callGeminiInternal(
     }
   }
 
-  throw lastError || new Error('All Gemini model fallbacks failed.');
+  throw lastError || new Error('All Gemini model fallbacks completed without text output.');
 }
+
+// Track 429 quota exhaustion or rate limits on OpenAI to avoid stalling subsequent requests
+let openAiRateLimitCooldownUntil = 0;
 
 async function callOpenAIInternal(
   requestConfig: {
@@ -199,18 +221,48 @@ async function callOpenAIInternal(
     }
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(payload)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+  let response: Response;
+  try {
+    response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+  } catch (fetchErr: any) {
+    clearTimeout(timeoutId);
+    if (fetchErr.name === 'AbortError') {
+      throw new Error('OpenAI request timed out after 35s');
+    }
+    throw fetchErr;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`OpenAI API failed (${response.status}): ${errorBody}`);
+    let cleanMessage = `HTTP ${response.status}`;
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (parsed?.error?.message) {
+        cleanMessage = `${parsed.error.message} (${parsed.error.type || parsed.error.code || response.status})`;
+      }
+    } catch (_) {
+      cleanMessage = errorBody.replace(/\s+/g, ' ').trim().slice(0, 150);
+    }
+
+    if (response.status === 429) {
+      // Cooldown for 60 seconds so subsequent calls proceed directly to Google Gemini
+      openAiRateLimitCooldownUntil = Date.now() + 60000;
+    }
+
+    throw new Error(`OpenAI API returned ${response.status}: ${cleanMessage}`);
   }
 
   const data: any = await response.json();
@@ -218,7 +270,6 @@ async function callOpenAIInternal(
   return { text: resultText };
 }
 
-// Unified AI Caller: Supports both OpenAI and Google Gemini with seamless failover
 // Unified AI Caller: Supports both Google Gemini and OpenAI with seamless failover
 async function callGenAIWithFallback(
   requestConfig: {
@@ -228,15 +279,16 @@ async function callGenAIWithFallback(
 ): Promise<{ text: string; providerUsed?: string }> {
   const rawSettings = store.getRawSettings();
   const hasOpenAI = !!(rawSettings.customOpenaiKey || process.env.OPENAI_API_KEY);
-  const preferredProvider = rawSettings.aiProvider || (hasOpenAI ? 'openai' : 'gemini');
+  const preferredProvider = rawSettings.aiProvider || 'gemini';
+  const isOpenAiCoolingDown = Date.now() < openAiRateLimitCooldownUntil;
 
-  // Only attempt OpenAI if explicitly selected and API key is present
-  if (preferredProvider === 'openai' && hasOpenAI) {
+  // Only attempt OpenAI if explicitly selected and API key is present and not cooling down from 429
+  if (preferredProvider === 'openai' && hasOpenAI && !isOpenAiCoolingDown) {
     try {
       const res = await callOpenAIInternal(requestConfig);
       return { text: res.text, providerUsed: 'openai' };
     } catch (openAiError: any) {
-      console.warn(`[AI Engine] Primary OpenAI attempt did not complete (${openAiError.message}). Seamlessly switching to current Google Gemini...`);
+      console.info(`[AI Engine] Primary OpenAI attempt diverted (${openAiError.message}). Seamlessly switching to Google Gemini...`);
       const res = await callGeminiInternal(requestConfig);
       return { text: res.text, providerUsed: 'gemini' };
     }
@@ -246,10 +298,12 @@ async function callGenAIWithFallback(
       const res = await callGeminiInternal(requestConfig);
       return { text: res.text, providerUsed: 'gemini' };
     } catch (geminiError: any) {
-      if (hasOpenAI) {
-        console.warn(`[AI Engine] Gemini call failed (${geminiError.message}). Seamlessly falling over to OpenAI...`);
-        const res = await callOpenAIInternal(requestConfig);
-        return { text: res.text, providerUsed: 'openai' };
+      if (hasOpenAI && !isOpenAiCoolingDown) {
+        console.info(`[AI Engine] Gemini fallback diverted (${geminiError.message}). Seamlessly falling over to OpenAI...`);
+        try {
+          const res = await callOpenAIInternal(requestConfig);
+          return { text: res.text, providerUsed: 'openai' };
+        } catch (_) {}
       }
       throw geminiError;
     }
@@ -1593,7 +1647,7 @@ app.post('/api/settings/upload-logo', authenticateUser, requireAdminRole, (req, 
 // Settings: Test AI Connection (Gemini or OpenAI)
 app.post('/api/settings/test-ai', async (req, res) => {
   const { provider, model, customKey } = req.body;
-  const targetProvider = provider || store.getRawSettings().aiProvider || 'openai';
+  const targetProvider = provider || store.getRawSettings().aiProvider || 'gemini';
   const startTime = Date.now();
 
   try {
