@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Tajawal', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Tajawal', serif;
+  --font-mono: 'Plus Jakarta Sans', monospace;
+}
+
+/* Global Executive Typography System - Tajawal Default */
+*,
+*::before,
+*::after {
+  font-family: 'Tajawal', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+html {
+  font-family: 'Tajawal', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17.5px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+body {
+  font-family: 'Tajawal', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1.03rem;
+  font-weight: 500;
+  line-height: 1.68;
+  color: #0f172a;
+  background-color: #f8fafc;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+html.dark body {
+  color: #f1f5f9;
+  background-color: #0b1120;
+}
+
+/* Micro-Typography Optimization: elevate small labels & badges for maximum legibility */
+.text-\[10px\] {
+  font-size: 11.5px !important;
+  line-height: 1.35 !important;
+}
+
+.text-\[11px\] {
+  font-size: 12.5px !important;
+  line-height: 1.4 !important;
+}
+
+.text-\[12px\] {
+  font-size: 13.5px !important;
+}
+
+/* Table typography clarity */
+table th {
+  font-size: 0.94rem;
+}
+
+table td {
+  font-size: 0.96rem;
+}
+
+/* Form controls, inputs, selects, buttons, tables inherit Tajawal Typography */
+button,
+input,
+optgroup,
+select,
+textarea,
+table,
+th,
+td,
+label,
+span,
+p,
+a,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Tajawal', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Arabic RTL Specific Enhancements with Tajawal */
+[dir="rtl"] {
+  font-family: 'Tajawal', sans-serif;
+  line-height: 1.68;
+  text-align: start;
+}
+
+/* In RTL, disable letter-spacing to preserve connected Arabic cursive glyphs */
+[dir="rtl"] *,
+[dir="rtl"] *::before,
+[dir="rtl"] *::after {
+  letter-spacing: normal !important;
+}
+
+/* Custom scrollbar and utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Tabular numbers and Bidirectional isolation for mixed numbers, dates, and percentages */
+.tabular-nums,
+[data-tabular-num] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Mixed content isolation: prevents punctuation, minus signs, slashes, and percentages from flipping */
+bdi,
+.bidi-isolate {
+  unicode-bidi: isolate;
+}
+
+[dir="rtl"] .ltr-val {
+  direction: ltr;
+  display: inline-block;
+  unicode-bidi: isolate;
+}
+
+/* Ensure buttons, badges, and chips with mixed icons/Arabic/English maintain true baseline & optical center */
+button, .btn-action {
+  vertical-align: middle;
+}
+
+/* Remove default number input spinners to prevent numbers clipping */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ========================================================================= */
+/* EXECUTIVE REPORT & CARD STYLING                                           */
+/* ========================================================================= */
+.report-card-premium {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+  border-radius: 1.25rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.report-card-premium:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+}
+
+/* High-Contrast Table Styling */
+.table-executive th {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.table-executive td {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-executive tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* PDF Export mode styling: ensures clean white backgrounds and crisp text */
+.exporting-pdf-mode {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  padding: 12px !important;
+  width: 100% !important;
+}
+
+.exporting-pdf-mode button,
+.exporting-pdf-mode .print-hidden {
+  display: none !important;
+}
+
+/* ========================================================================= */
+/* OFFICIAL MEDIA PRINT STYLES FOR GOVERNMENT & EXECUTIVE TENDER REPORTS    */
+/* ========================================================================= */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm 6mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide navigation, sidebar, global header, buttons, tools */
+  header,
+  nav,
+  aside,
+  footer,
+  button,
+  .print\:hidden,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure main container takes 100% width without overflows */
+  main,
+  #tender-evaluation-report-view-container,
+  #official-matrix-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove scroll limitations on print */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .max-h-\[75vh\],
+  .max-h-\[80vh\] {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Force print colors & backgrounds */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Crisp table layouts */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+}

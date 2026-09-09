@@ -1,0 +1,6 @@
+{
+  "name": "الجامعة العربية المفتوحة - نظام مقارنة للتأمين الطبي للعاملين",
+  "description": "نظام مقارنة عروض التأمين الطبي للعاملين - الجامعة العربية المفتوحة - الأردن",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

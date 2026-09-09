@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" fill="none">
+  <!-- Arab Open University - Jordan (AOU) Emblem -->
+  <defs>
+    <linearGradient id="embBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F3876" />
+      <stop offset="100%" stop-color="#08214D" />
+    </linearGradient>
+    <linearGradient id="embGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00A859" />
+      <stop offset="100%" stop-color="#007A3D" />
+    </linearGradient>
+    <linearGradient id="embGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5B324" />
+      <stop offset="100%" stop-color="#D98207" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="72" height="72" rx="20" fill="url(#embBlue)" />
+  <rect x="5" y="5" width="70" height="70" rx="19" stroke="url(#embGold)" stroke-width="1.8" stroke-opacity="0.75" />
+
+  <!-- Open Book Pages -->
+  <path d="M22 55 C29 50 36 51 40 56 C40 34 40 31 40 31 C36 26 29 25 22 30 Z" fill="#FFFFFF" fill-opacity="0.95" />
+  <path d="M58 55 C51 50 44 51 40 56 C40 34 40 31 40 31 C44 26 51 25 58 30 Z" fill="#FFFFFF" fill-opacity="0.95" />
+  <!-- Spine -->
+  <path d="M39 30 L41 30 L41 57 L39 57 Z" fill="url(#embGold)" />
+
+  <!-- Arcs -->
+  <path d="M25 26 C30 18 50 18 55 26" stroke="url(#embGreen)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+  <path d="M28 20 C33 14 47 14 52 20" stroke="url(#embGold)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+  <!-- Star -->
+  <circle cx="40" cy="21" r="3.5" fill="url(#embGold)" />
+  <circle cx="40" cy="21" r="1.5" fill="#FFFFFF" />
+
+  <!-- Laurel -->
+  <path d="M24 59 C31 63 36 62 40 59 C44 62 49 63 56 59" stroke="url(#embGreen)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+</svg>

@@ -1,0 +1,61 @@
+{
+  "users": [
+    {
+      "id": "usr_admin",
+      "username": "admin",
+      "name": "مدير النظام التنفيذي",
+      "email": "admin@tender-evaluator.local",
+      "role": "super_admin",
+      "passwordHash": "9ec80aed066bd9bddeb4648c9e2607792022c2db29bb3d1f51733b2572fbf13a53d540fe6883018a09c05f8c19f7aa9954048e11f163a6c83f4fd0083e6113bc",
+      "salt": "6ee12c464cbb33523dcb4ed139387266",
+      "createdAt": "2026-09-07T15:37:01.518Z",
+      "isActive": true,
+      "lastLoginAt": "2026-09-08T15:50:33.626Z",
+      "phone": "+962790000000",
+      "department": "أمانة سر اللجنة المركزية",
+      "jobTitle": "رئيس لجنة عطاء التأمين الطبي"
+    },
+    {
+      "id": "usr_committee",
+      "username": "committee",
+      "name": "رئيس لجنة العطاءات (Committee Admin)",
+      "email": "committee@tender-evaluator.local",
+      "role": "committee_admin",
+      "passwordHash": "855bbf588fc3fe4e893905d47c85b330be771188ef63d51931c7a566b3a70925e7e8e70f8a35fd066d9c10b8c61ff812e0b4715838b837a02c6645ed321fefe8",
+      "salt": "4383859cd01d792f06a013c94fd9ebba",
+      "createdAt": "2026-09-07T15:37:01.518Z",
+      "isActive": true
+    },
+    {
+      "id": "usr_evaluator",
+      "username": "evaluator",
+      "name": "عضو ومقيم فني ومالي (Evaluator)",
+      "email": "evaluator@tender-evaluator.local",
+      "role": "evaluator",
+      "passwordHash": "4417238a2575a6e19582bc110eb93d26b0abcc05940c6e8c6e5056a7109f49469b96fe38efc17b269e0395292c106994225771738d5a7dc3be6fc52cf0f2134f",
+      "salt": "934084c8abafcf3625b4e2eee90ecd9f",
+      "createdAt": "2026-09-07T15:37:01.518Z",
+      "isActive": true
+    }
+  ],
+  "settings": {
+    "organizationNameAr": "الجامعة العربية المفتوحة - نظام مقارنة للتأمين الطبي للعاملين",
+    "organizationNameEn": "Arab Open University - Staff Medical Insurance Comparison System",
+    "committeeTitleAr": "الجامعة العربيه المفتوحة - الأردن",
+    "committeeTitleEn": "Arab Open University - Jordan",
+    "logoUrl": "/logo.png",
+    "logoWidth": 160,
+    "aiProvider": "openai",
+    "geminiModel": "gemini-3.8-flash",
+    "openaiModel": "gpt-4o",
+    "defaultCurrency": "JOD",
+    "defaultTechnicalRatio": 60,
+    "defaultFinancialRatio": 40,
+    "strictNoBonusEnforced": true,
+    "statutoryIssuancePercent": 0.05,
+    "statutoryStampsPercent": 0.01,
+    "statutoryGuaranteePercent": 0.005,
+    "fixedContractFee": 0,
+    "requireAuthForReports": false
+  }
+}
