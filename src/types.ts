@@ -267,12 +267,67 @@ export interface TenderProject {
 
 export type UserRole = 'super_admin' | 'committee_admin' | 'evaluator' | 'viewer';
 
+export interface RolePermissions {
+  manageUsers: boolean;       // Add, edit, delete users and set roles/permissions
+  manageAiSettings: boolean;  // Configure AI models, API keys, AI provider toggle
+  manageBranding: boolean;    // Configure organization name, logos, and report titles
+  manageTenderRules: boolean; // Configure statutory fees, technical/financial weights
+  manageDeployment: boolean;  // Server deployment tools and data backups
+  exportReports: boolean;     // Export approved tender reports, Excel, and PDF
+  editProposals: boolean;     // Edit tender offers, rates, and benefit mappings
+  viewAudit: boolean;         // View audit logs and compliance inspector
+}
+
+export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  super_admin: {
+    manageUsers: true,
+    manageAiSettings: true,
+    manageBranding: true,
+    manageTenderRules: true,
+    manageDeployment: true,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  committee_admin: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: true,
+    manageTenderRules: true,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  evaluator: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: false,
+    manageTenderRules: false,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  viewer: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: false,
+    manageTenderRules: false,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: false,
+    viewAudit: true
+  }
+};
+
 export interface AppUser {
   id: string;
   username: string;
   name: string;
   email: string;
   role: UserRole;
+  permissions?: RolePermissions;
   avatar?: string;
   phone?: string;
   department?: string;

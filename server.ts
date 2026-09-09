@@ -1370,10 +1370,34 @@ function authenticateUser(req: any, res: any, next: any) {
 }
 
 function requireAdminRole(req: any, res: any, next: any) {
-  if (!req.user || (req.user.role !== 'super_admin' && req.user.role !== 'committee_admin')) {
-    return res.status(403).json({ error: 'عذراً، صلاحيات إدارة النظام مطلوبة (Administrative privileges required)' });
+  if (!req.user) {
+    return res.status(401).json({ error: 'جلسة الدخول مطلوبة (Authentication required)' });
   }
-  next();
+  const role = req.user.role;
+  const perms = req.user.permissions || {};
+  // Admin access granted if super_admin OR user has at least one administrative permission
+  if (role === 'super_admin' || perms.manageUsers || perms.manageAiSettings || perms.manageBranding || perms.manageTenderRules || perms.manageDeployment) {
+    return next();
+  }
+  return res.status(403).json({ error: 'عذراً، صلاحيات إدارة النظام مطلوبة (Administrative privileges required)' });
+}
+
+function requirePermission(permKey: keyof import('./serverStore').RolePermissions) {
+  return (req: any, res: any, next: any) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'جلسة الدخول مطلوبة (Authentication required)' });
+    }
+    if (req.user.role === 'super_admin') {
+      return next();
+    }
+    const perms = req.user.permissions || {};
+    if (perms[permKey]) {
+      return next();
+    }
+    return res.status(403).json({ 
+      error: `عذراً، تفتقر إلى صلاحية: ${permKey} (Access denied: missing ${permKey} permission)` 
+    });
+  };
 }
 
 // System-wide API Protection Middleware:
@@ -1568,21 +1592,31 @@ app.post('/api/auth/change-password', authenticateUser, (req: any, res: any) => 
 });
 
 // Admin: List Users
-app.get('/api/admin/users', authenticateUser, requireAdminRole, (req, res) => {
+app.get('/api/admin/users', authenticateUser, requirePermission('manageUsers'), (req, res) => {
   res.json(store.getUsers());
 });
 
 // Admin: Create User
-app.post('/api/admin/users', authenticateUser, requireAdminRole, (req, res) => {
+app.post('/api/admin/users', authenticateUser, requirePermission('manageUsers'), (req, res) => {
   try {
-    const { username, password, name, email, role } = req.body;
+    const { username, password, name, email, role, phone, department, jobTitle, permissions } = req.body;
     if (!username || !password || !name || !email) {
       return res.status(400).json({ error: 'يرجى ملء جميع الحقول المطلوبة (Please fill all required fields)' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'كلمة المرور يجب أن لا تقل عن 6 أحرف (Password must be at least 6 characters)' });
     }
-    const newUser = store.createUser({ username, password, name, email, role: role || 'evaluator' });
+    const newUser = store.createUser({ 
+      username, 
+      password, 
+      name, 
+      email, 
+      role: role || 'evaluator',
+      phone,
+      department,
+      jobTitle,
+      permissions
+    });
     res.json(newUser);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -1590,11 +1624,11 @@ app.post('/api/admin/users', authenticateUser, requireAdminRole, (req, res) => {
 });
 
 // Admin: Update User
-app.put('/api/admin/users/:id', authenticateUser, requireAdminRole, (req, res) => {
+app.put('/api/admin/users/:id', authenticateUser, requirePermission('manageUsers'), (req, res) => {
   try {
     const { id } = req.params;
-    const { name, username, email, phone, department, jobTitle, bio, avatar, role, password, isActive } = req.body;
-    const updated = store.updateUser(id, { name, username, email, phone, department, jobTitle, bio, avatar, role, password, isActive });
+    const { name, username, email, phone, department, jobTitle, bio, avatar, role, permissions, password, isActive } = req.body;
+    const updated = store.updateUser(id, { name, username, email, phone, department, jobTitle, bio, avatar, role, permissions, password, isActive });
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -1602,7 +1636,7 @@ app.put('/api/admin/users/:id', authenticateUser, requireAdminRole, (req, res) =
 });
 
 // Admin: Delete User
-app.delete('/api/admin/users/:id', authenticateUser, requireAdminRole, (req: any, res: any) => {
+app.delete('/api/admin/users/:id', authenticateUser, requirePermission('manageUsers'), (req: any, res: any) => {
   try {
     const { id } = req.params;
     store.deleteUser(id, req.user.id);

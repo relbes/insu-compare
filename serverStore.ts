@@ -7,12 +7,76 @@ dotenv.config();
 
 export type UserRole = 'super_admin' | 'committee_admin' | 'evaluator' | 'viewer';
 
+export interface RolePermissions {
+  manageUsers: boolean;       // Add, edit, delete users and set roles/permissions
+  manageAiSettings: boolean;  // Configure AI models, API keys, AI provider toggle
+  manageBranding: boolean;    // Configure organization name, logos, and report titles
+  manageTenderRules: boolean; // Configure statutory fees, technical/financial weights
+  manageDeployment: boolean;  // Server deployment tools and data backups
+  exportReports: boolean;     // Export approved tender reports, Excel, and PDF
+  editProposals: boolean;     // Edit tender offers, rates, and benefit mappings
+  viewAudit: boolean;         // View audit logs and compliance inspector
+}
+
+export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  super_admin: {
+    manageUsers: true,
+    manageAiSettings: true,
+    manageBranding: true,
+    manageTenderRules: true,
+    manageDeployment: true,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  committee_admin: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: true,
+    manageTenderRules: true,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  evaluator: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: false,
+    manageTenderRules: false,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: true,
+    viewAudit: true
+  },
+  viewer: {
+    manageUsers: false,
+    manageAiSettings: false,
+    manageBranding: false,
+    manageTenderRules: false,
+    manageDeployment: false,
+    exportReports: true,
+    editProposals: false,
+    viewAudit: true
+  }
+};
+
+export function getEffectivePermissions(role: UserRole, customPerms?: Partial<RolePermissions>): RolePermissions {
+  const defaults = DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS.viewer;
+  if (!customPerms) return { ...defaults };
+  return {
+    ...defaults,
+    ...customPerms
+  };
+}
+
 export interface StoredUser {
   id: string;
   username: string;
   name: string;
   email: string;
   role: UserRole;
+  permissions?: RolePermissions;
   avatar?: string;
   phone?: string;
   department?: string;
@@ -185,19 +249,32 @@ class StoreManager {
 
   // User methods
   getUsers() {
-    return this.data.users.map(({ passwordHash, salt, ...safeUser }) => safeUser);
+    return this.data.users.map(({ passwordHash, salt, ...safeUser }) => ({
+      ...safeUser,
+      permissions: getEffectivePermissions(safeUser.role, safeUser.permissions)
+    }));
   }
 
   getUserById(id: string) {
-    return this.data.users.find(u => u.id === id);
+    const user = this.data.users.find(u => u.id === id);
+    if (!user) return undefined;
+    return {
+      ...user,
+      permissions: getEffectivePermissions(user.role, user.permissions)
+    };
   }
 
   getUserByUsername(username: string) {
-    return this.data.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
+    const user = this.data.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
+    if (!user) return undefined;
+    return {
+      ...user,
+      permissions: getEffectivePermissions(user.role, user.permissions)
+    };
   }
 
   authenticate(username: string, plainPassword: string) {
-    const user = this.getUserByUsername(username);
+    const user = this.data.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
     if (!user || !user.isActive) {
       return null;
     }
@@ -220,8 +297,10 @@ class StoreManager {
     this.saveData();
 
     const { passwordHash, salt, ...safeUser } = user;
+    const effectivePerms = getEffectivePermissions(safeUser.role, safeUser.permissions);
+    const safeUserWithPerms = { ...safeUser, permissions: effectivePerms };
     const token = this.generateToken(safeUser.id, safeUser.username, safeUser.role);
-    return { user: safeUser, token };
+    return { user: safeUserWithPerms, token };
   }
 
   createUser(params: {
@@ -230,18 +309,27 @@ class StoreManager {
     name: string;
     email: string;
     role: UserRole;
+    phone?: string;
+    department?: string;
+    jobTitle?: string;
+    permissions?: Partial<RolePermissions>;
   }) {
-    const existing = this.getUserByUsername(params.username);
+    const existing = this.data.users.find(u => u.username.toLowerCase() === params.username.toLowerCase().trim());
     if (existing) {
       throw new Error('اسم المستخدم مستخدم بالفعل (Username already taken)');
     }
     const { hash, salt } = hashPassword(params.password);
+    const effectivePerms = getEffectivePermissions(params.role, params.permissions);
     const newUser: StoredUser = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       username: params.username.toLowerCase().trim(),
       name: params.name.trim(),
       email: params.email.trim(),
       role: params.role,
+      permissions: effectivePerms,
+      phone: params.phone?.trim() || '',
+      department: params.department?.trim() || '',
+      jobTitle: params.jobTitle?.trim() || '',
       passwordHash: hash,
       salt: salt,
       createdAt: new Date().toISOString(),
@@ -263,6 +351,7 @@ class StoreManager {
     bio: string;
     avatar: string;
     role: UserRole;
+    permissions: Partial<RolePermissions>;
     password?: string;
     isActive: boolean;
   }>) {
@@ -280,6 +369,12 @@ class StoreManager {
     if (updates.avatar !== undefined) user.avatar = updates.avatar;
     if (updates.role !== undefined) user.role = updates.role;
     if (updates.isActive !== undefined) user.isActive = updates.isActive;
+
+    if (updates.permissions !== undefined) {
+      user.permissions = getEffectivePermissions(user.role, updates.permissions);
+    } else if (updates.role !== undefined && !user.permissions) {
+      user.permissions = getEffectivePermissions(user.role);
+    }
 
     if (updates.username !== undefined) {
       const cleanUsername = updates.username.trim().toLowerCase();
@@ -301,7 +396,10 @@ class StoreManager {
 
     this.saveData();
     const { passwordHash, salt: _, ...safeUser } = user;
-    return safeUser;
+    return {
+      ...safeUser,
+      permissions: getEffectivePermissions(safeUser.role, safeUser.permissions)
+    };
   }
 
   deleteUser(id: string, currentUserId?: string) {

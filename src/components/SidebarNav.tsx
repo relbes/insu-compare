@@ -384,7 +384,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
       {/* 2. Main Navigation: Categorized Main Menus with Collapsible Submenus */}
       <div className="flex-1 py-3 px-2 space-y-2.5 overflow-y-auto custom-scrollbar">
-        {menuCategories.map((category) => {
+        {menuCategories
+          .filter(category => category.key !== 'admin' || isAdmin)
+          .map((category) => {
           const isOpen = openCategories[category.key] ?? true;
           const CategoryIcon = category.icon;
           const hasActiveChild = category.submenus.some(sub => sub.id === normalizedCurrentTab);

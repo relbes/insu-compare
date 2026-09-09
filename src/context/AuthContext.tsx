@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppUser, UserRole } from '../types';
+import { AppUser, UserRole, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from '../types';
 import { authFetch } from '../utils/authInterceptor';
 
 export interface UpdateProfileParams {
@@ -23,6 +23,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   isCommitteeAdmin: boolean;
+  permissions: RolePermissions;
+  hasPermission: (permKey: keyof RolePermissions) => boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   authModalOpen: boolean;
@@ -189,10 +191,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
-  const role: UserRole | undefined = user?.role;
+  const role: UserRole = user?.role || 'viewer';
+  const defaultPerms = DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS.viewer;
+  const permissions: RolePermissions = {
+    ...defaultPerms,
+    ...(user?.permissions || {})
+  };
+
   const isSuperAdmin = role === 'super_admin';
   const isCommitteeAdmin = role === 'committee_admin';
-  const isAdmin = isSuperAdmin || isCommitteeAdmin;
+  const isAdmin = isSuperAdmin || permissions.manageUsers || permissions.manageAiSettings || permissions.manageBranding || permissions.manageTenderRules || permissions.manageDeployment;
+
+  const hasPermission = (permKey: keyof RolePermissions): boolean => {
+    if (!user) return false;
+    if (user.role === 'super_admin') return true;
+    return !!permissions[permKey];
+  };
 
   return (
     <AuthContext.Provider
@@ -204,6 +218,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isSuperAdmin,
         isCommitteeAdmin,
+        permissions,
+        hasPermission,
         login,
         logout,
         authModalOpen,

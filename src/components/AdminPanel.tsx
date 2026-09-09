@@ -32,7 +32,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useI18n } from '../i18n/I18nContext';
-import { AppUser, UserRole, SystemSettings } from '../types';
+import { AppUser, UserRole, RolePermissions, DEFAULT_ROLE_PERMISSIONS, SystemSettings } from '../types';
 import { authFetch } from '../utils/authInterceptor';
 
 export interface AdminPanelProps {
@@ -41,7 +41,7 @@ export interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
   const { isRtl, language } = useI18n();
-  const { user, token, isAdmin, isSuperAdmin, setAuthModalOpen } = useAuth();
+  const { user, token, isAdmin, isSuperAdmin, permissions: currentUserPerms, hasPermission, setAuthModalOpen } = useAuth();
   const { settings, updateSettings, uploadLogo, removeLogo, testAi, reloadSettings } = useSettings();
 
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'ai' | 'branding' | 'tender' | 'deployment'>('users');
@@ -60,6 +60,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
   const [formDepartment, setFormDepartment] = useState('');
   const [formJobTitle, setFormJobTitle] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('evaluator');
+  const [formPermissions, setFormPermissions] = useState<RolePermissions>({ ...DEFAULT_ROLE_PERMISSIONS.evaluator });
   const [formPassword, setFormPassword] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
   const [userFormError, setUserFormError] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
     setFormDepartment('');
     setFormJobTitle('');
     setFormRole('evaluator');
+    setFormPermissions({ ...DEFAULT_ROLE_PERMISSIONS.evaluator });
     setFormPassword('');
     setFormIsActive(true);
     setUserFormError(null);
@@ -157,11 +159,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
     setFormDepartment(u.department || '');
     setFormJobTitle(u.jobTitle || '');
     setFormRole(u.role);
+    const defaults = DEFAULT_ROLE_PERMISSIONS[u.role] || DEFAULT_ROLE_PERMISSIONS.viewer;
+    setFormPermissions({
+      ...defaults,
+      ...(u.permissions || {})
+    });
     setFormPassword('');
     setFormIsActive(u.isActive);
     setUserFormError(null);
     setUserFormSuccess(null);
     setUserModalMode('edit');
+  };
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setFormRole(newRole);
+    // Auto-populate recommended default permissions for this role
+    const defaults = DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS.viewer;
+    setFormPermissions({ ...defaults });
+  };
+
+  const togglePermission = (key: keyof RolePermissions) => {
+    setFormPermissions(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const handleSaveUser = async (e: React.FormEvent) => {
@@ -194,6 +215,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
             department: formDepartment,
             jobTitle: formJobTitle,
             role: formRole,
+            permissions: formPermissions,
             password: formPassword
           })
         });
@@ -217,6 +239,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
           department: formDepartment,
           jobTitle: formJobTitle,
           role: formRole,
+          permissions: formPermissions,
           isActive: formIsActive
         };
         if (formPassword.trim()) {
@@ -235,7 +258,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
         if (!res.ok) {
           setUserFormError(data.error || 'Failed to update user');
         } else {
-          setUserFormSuccess(isRtl ? 'تم تحديث بيانات المستخدم بنجاح' : 'User updated successfully');
+          setUserFormSuccess(isRtl ? 'تم تحديث بيانات وصلاحيات المستخدم بنجاح' : 'User and permissions updated successfully');
           fetchUsers();
           setTimeout(() => setUserModalMode(null), 1200);
         }
@@ -598,7 +621,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        {renderRoleBadge(u.role)}
+                        <div className="space-y-1">
+                          {renderRoleBadge(u.role)}
+                          {u.permissions && (
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {u.permissions.manageUsers && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                                  {isRtl ? 'المستخدمين' : 'Users'}
+                                </span>
+                              )}
+                              {u.permissions.manageAiSettings && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  AI
+                                </span>
+                              )}
+                              {u.permissions.manageBranding && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                                  {isRtl ? 'الهوية' : 'Branding'}
+                                </span>
+                              )}
+                              {u.permissions.manageTenderRules && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-sky-50 text-sky-700 border border-sky-200">
+                                  {isRtl ? 'الأوزان' : 'Rules'}
+                                </span>
+                              )}
+                              {u.permissions.manageDeployment && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                                  {isRtl ? 'السيرفر' : 'Server'}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center gap-1 text-[11px] font-black ${
@@ -1395,18 +1449,186 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateHome }) => {
 
                 <div>
                   <label className="block text-xs font-black text-slate-700 mb-1">
-                    {isRtl ? 'الدور والصلاحية' : 'System Role'}
+                    {isRtl ? 'الدور الوظيفي الرئيسي' : 'Primary Role'}
                   </label>
                   <select
                     value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as UserRole)}
+                    onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                     className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-black text-slate-900 focus:bg-white focus:border-sky-600 outline-hidden"
                   >
-                    <option value="super_admin">{isRtl ? 'مدير عام للنظام (Super Admin)' : 'Super Admin'}</option>
-                    <option value="committee_admin">{isRtl ? 'رئيس لجنة العطاء (Committee Admin)' : 'Committee Admin'}</option>
-                    <option value="evaluator">{isRtl ? 'مقيّم فني ومالي (Evaluator)' : 'Evaluator'}</option>
-                    <option value="viewer">{isRtl ? 'مستعرض تقارير فقط (Viewer)' : 'Viewer'}</option>
+                    <option value="super_admin">{isRtl ? 'مدير عام للنظام (Super Admin) - كامل الصلاحيات' : 'Super Admin (Full Access)'}</option>
+                    <option value="committee_admin">{isRtl ? 'رئيس لجنة العطاء (Committee Admin) - إدارة الفحص' : 'Committee Admin (Tender Head)'}</option>
+                    <option value="evaluator">{isRtl ? 'مقيّم فني ومالي (Evaluator) - إدخال وتحليل' : 'Evaluator (Scoring & Analysis)'}</option>
+                    <option value="viewer">{isRtl ? 'مستعرض تقارير فقط (Viewer) - قراءة وتدقيق' : 'Viewer (Read-only)'}</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Fine-grained Role Permissions Checklist (Check/Uncheck Options) */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-sky-600" />
+                    <span className="text-xs font-black text-slate-900">
+                      {isRtl ? 'تحديد صلاحيات هذا المستخدم (تفعيل / إلغاء)' : 'Role Permissions (Check / Uncheck Access)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defaults = DEFAULT_ROLE_PERMISSIONS[formRole] || DEFAULT_ROLE_PERMISSIONS.viewer;
+                      setFormPermissions({ ...defaults });
+                    }}
+                    className="text-[11px] font-bold text-sky-700 hover:text-sky-800 underline cursor-pointer"
+                  >
+                    {isRtl ? 'استعادة الافتراضي للدور' : 'Reset to Role Defaults'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {/* manageUsers */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.manageUsers}
+                      onChange={() => togglePermission('manageUsers')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'إدارة المستخدمين والأدوار' : 'Manage Users & Roles'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'إنشاء وتعديل وحذف حسابات المستخدمين وتعيين الصلاحيات' : 'Create, edit, delete users and adjust permissions'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* manageAiSettings */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.manageAiSettings}
+                      onChange={() => togglePermission('manageAiSettings')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'إعدادات الذكاء الاصطناعي (AI)' : 'AI Provider & Models'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'التبديل بين Gemini و OpenAI وتعديل مفاتيح الربط والموديلات' : 'Configure Gemini / OpenAI keys, models, and test connections'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* manageBranding */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.manageBranding}
+                      onChange={() => togglePermission('manageBranding')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'الهوية والشعار المؤسسي' : 'Branding & Logo'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'تحديث مسميات الجامعة واللجنة ورفع وتغيير الشعار' : 'Upload custom logos, update organization & committee titles'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* manageTenderRules */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.manageTenderRules}
+                      onChange={() => togglePermission('manageTenderRules')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'محددات العطاء والرسوم القانونية' : 'Tender & Statutory Rules'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'تعديل نسب الأوزان الفنية والمالية ورسوم الطوابع ورسوم العقد' : 'Set technical/financial weights, stamp duties, and guarantee fees'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* manageDeployment */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.manageDeployment}
+                      onChange={() => togglePermission('manageDeployment')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'النشر على السيرفر والنسخ الاحتياطي' : 'Deployment & Backups'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'الوصول لأدوات نشر cPanel والنسخ الاحتياطي الكامل' : 'Access cPanel/Cloud hosting deployment tools and JSON backup'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* exportReports */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.exportReports}
+                      onChange={() => togglePermission('exportReports')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'تصدير التقارير و Excel / PDF' : 'Export Reports & Files'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'تصدير جداول المفاضلة ومحاضر الترسية بصيغ Excel و PDF' : 'Export comparison tables, executive summaries, and award letters'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* editProposals */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.editProposals}
+                      onChange={() => togglePermission('editProposals')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'إدخال وتعديل عروض الشركات' : 'Edit Proposals & Rates'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'تعديل أسعار التأمين وتغطيات الشركات ومطابقة المنافع' : 'Modify financial premiums, benefit requirements, and company offers'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* viewAudit */}
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200/80 cursor-pointer hover:border-sky-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formPermissions.viewAudit}
+                      onChange={() => togglePermission('viewAudit')}
+                      className="mt-0.5 w-4 h-4 accent-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="text-xs font-black text-slate-800">
+                        {isRtl ? 'سجل التدقيق والتوافق النظامي' : 'Audit Logs & Compliance'}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {isRtl ? 'استعراض سجلات الدخول وتعديلات التقييم والفحص الفني' : 'Inspect user activity audit trails and evaluation compliance'}
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
 
